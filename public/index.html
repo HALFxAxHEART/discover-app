@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Discover — InkStream</title>
-<link rel="icon" href="/favicon.ico" />
+<link rel="icon" href="/discover/favicon.ico" />
 <style>
   :root {
     --primary: #3060ad;
@@ -85,7 +85,7 @@
 </head>
 <body>
 <header>
-  <img src="/favicon.ico" alt="" />
+  <img src="/discover/favicon.ico" alt="" />
   <h1>Discover New Series</h1>
 </header>
 <main>
@@ -105,7 +105,7 @@
     if (!q) return;
     btn.disabled = true;
     results.innerHTML = '<div class="status">Searching...</div>';
-    fetch('/api/search?q=' + encodeURIComponent(q))
+    fetch('/discover/api/search?q=' + encodeURIComponent(q))
       .then(function (r) { return r.json(); })
       .then(function (data) { render(data.results); })
       .catch(function () { results.innerHTML = '<div class="status">Search failed. Try again.</div>'; })
@@ -123,7 +123,7 @@
       card.className = 'card';
 
       var img = document.createElement('img');
-      img.src = '/api/thumbnail/' + item.id;
+      img.src = '/discover/api/thumbnail/' + item.id;
       img.loading = 'lazy';
       card.appendChild(img);
 
@@ -161,7 +161,7 @@
   function addSeries(id, btnEl) {
     btnEl.disabled = true;
     btnEl.textContent = 'Adding...';
-    fetch('/api/add', {
+    fetch('/discover/api/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mangaId: id }),
