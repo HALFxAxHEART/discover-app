@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Discover — InkStream</title>
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    --primary: #3060ad;
+    --secondary: #b64499;
+    --bg: #16191f;
+    --card-bg: #1c2028;
+    --text: #e8eaed;
+    --text-muted: rgba(232, 234, 237, 0.6);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  header img { height: 2rem; width: 2rem; }
+  header h1 { font-size: 1.25rem; margin: 0; font-weight: 700; }
+  main { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
+  .search-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .search-bar input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 1rem;
+  }
+  .search-bar button, .add-btn {
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.5rem;
+    border: none;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .search-bar button:disabled, .add-btn:disabled { opacity: 0.5; cursor: default; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.25rem;
+  }
+  .card {
+    background: var(--card-bg);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card img {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    background: #0e1015;
+  }
+  .card .body { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+  .card .title { font-size: 0.9rem; font-weight: 600; line-height: 1.3; }
+  .card .source { font-size: 0.75rem; color: var(--text-muted); }
+  .card .add-btn { margin-top: auto; font-size: 0.85rem; padding: 0.5rem; }
+  .status { color: var(--text-muted); padding: 2rem 0; text-align: center; }
+  .in-library { font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 0.5rem; }
+</style>
+</head>
+<body>
+<header>
+  <img src="/favicon.ico" alt="" />
+  <h1>Discover New Series</h1>
+</header>
+<main>
+  <div class="search-bar">
+    <input id="q" type="text" placeholder="Search Asura Scans, Webtoons.com..." autofocus />
+    <button id="searchBtn">Search</button>
+  </div>
+  <div id="results" class="grid"></div>
+</main>
+<script>
+  var input = document.getElementById('q');
+  var btn = document.getElementById('searchBtn');
+  var results = document.getElementById('results');
+
+  function search() {
+    var q = input.value.trim();
+    if (!q) return;
+    btn.disabled = true;
+    results.innerHTML = '<div class="status">Searching...</div>';
+    fetch('/api/search?q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (data) { render(data.results); })
+      .catch(function () { results.innerHTML = '<div class="status">Search failed. Try again.</div>'; })
+      .finally(function () { btn.disabled = false; });
+  }
+
+  function render(list) {
+    if (!list.length) {
+      results.innerHTML = '<div class="status">No results.</div>';
+      return;
+    }
+    results.innerHTML = '';
+    list.forEach(function (item) {
+      var card = document.createElement('div');
+      card.className = 'card';
+
+      var img = document.createElement('img');
+      img.src = '/api/thumbnail/' + item.id;
+      img.loading = 'lazy';
+      card.appendChild(img);
+
+      var body = document.createElement('div');
+      body.className = 'body';
+
+      var title = document.createElement('div');
+      title.className = 'title';
+      title.textContent = item.title;
+      body.appendChild(title);
+
+      var source = document.createElement('div');
+      source.className = 'source';
+      source.textContent = item.sourceName;
+      body.appendChild(source);
+
+      if (item.inLibrary) {
+        var already = document.createElement('div');
+        already.className = 'in-library';
+        already.textContent = 'Already in library';
+        body.appendChild(already);
+      } else {
+        var addBtn = document.createElement('button');
+        addBtn.className = 'add-btn';
+        addBtn.textContent = 'Add to Library';
+        addBtn.addEventListener('click', function () { addSeries(item.id, addBtn); });
+        body.appendChild(addBtn);
+      }
+
+      card.appendChild(body);
+      results.appendChild(card);
+    });
+  }
+
+  function addSeries(id, btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = 'Adding...';
+    fetch('/api/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mangaId: id }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        btnEl.textContent = 'Added (' + data.chapterCount + ' chapters downloading)';
+      })
+      .catch(function () {
+        btnEl.textContent = 'Failed - try again';
+        btnEl.disabled = false;
+      });
+  }
+
+  btn.addEventListener('click', search);
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); });
+</script>
+</body>
+</html>
