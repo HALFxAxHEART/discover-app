@@ -1,0 +1,33 @@
+services:
+  discover:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    mem_limit: 256m
+    ports:
+      - "3100"
+    networks:
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.discover-strip.stripprefix.prefixes=/discover"
+      - "traefik.http.routers.discover-http.entryPoints=http"
+      - "traefik.http.routers.discover-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.discover-http.rule=Host(`inkstream.stapulasolutions.com`) && PathPrefix(`/discover`)"
+      - "traefik.http.routers.discover-http.priority=100"
+      - "traefik.http.routers.discover-http.service=discover-svc"
+      - "traefik.http.routers.discover-https.entryPoints=https"
+      - "traefik.http.routers.discover-https.middlewares=gzip,discover-strip"
+      - "traefik.http.routers.discover-https.rule=Host(`inkstream.stapulasolutions.com`) && PathPrefix(`/discover`)"
+      - "traefik.http.routers.discover-https.priority=100"
+      - "traefik.http.routers.discover-https.service=discover-svc"
+      - "traefik.http.routers.discover-https.tls=true"
+      - "traefik.http.routers.discover-https.tls.certresolver=letsencrypt"
+      - "traefik.http.services.discover-svc.loadbalancer.server.port=3100"
+
+networks:
+  coolify:
+    external: true
