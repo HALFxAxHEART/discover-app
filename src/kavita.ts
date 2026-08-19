@@ -9,14 +9,25 @@ export type LibrarySeries = {
   lastChapterAdded: string;
 };
 
+// Cache the login: Kavita throttles rapid repeated logins (grid load fires
+// one per series + one per cover = ~20 logins → HTTP 500). Reuse a token for
+// 10 min so a page load does a single login.
+let _cachedAuth: { token: string; apiKey: string; expires: number } | null = null;
+
 async function login(): Promise<{ token: string; apiKey: string }> {
+  const now = Date.now();
+  if (_cachedAuth && _cachedAuth.expires > now) {
+    return { token: _cachedAuth.token, apiKey: _cachedAuth.apiKey };
+  }
   const response = await fetch(`${env.kavitaUrl}/api/Account/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username: env.kavitaUsername, password: env.kavitaPassword }),
   });
   if (!response.ok) throw new Error(`Kavita login failed: ${response.status}`);
-  return (await response.json()) as { token: string; apiKey: string };
+  const data = (await response.json()) as { token: string; apiKey: string };
+  _cachedAuth = { token: data.token, apiKey: data.apiKey, expires: now + 10 * 60 * 1000 };
+  return { token: data.token, apiKey: data.apiKey };
 }
 
 export async function listSeriesByRecentlyUpdated(): Promise<LibrarySeries[]> {
